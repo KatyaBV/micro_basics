@@ -1,0 +1,19 @@
+services:
+
+  logging-service:
+    build: ./logging-service
+    ports:
+      - "8001:8000"
+
+  counter-service:
+    build: ./counter-service
+    ports:
+      - "8002:8000"
+
+  facade-service:
+    build: ./facade-service
+    ports:
+      - "8000:8000"
+    depends_on:
+      - logging-service
+      - counter-service
