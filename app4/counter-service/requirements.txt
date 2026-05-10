@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+pydantic
+asyncpg
+hazelcast-python-client==5.4.0
+python-consul
