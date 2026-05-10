@@ -1,0 +1,137 @@
+services:
+
+  config-server:
+    build: ./config-server
+    ports:
+      - "8010:8000"
+
+  hazelcast-1:
+    image: hazelcast/hazelcast:5.4
+    environment:
+      - HZ_CLUSTERNAME=bank-cluster
+      - HZ_NETWORK_JOIN_MULTICAST_ENABLED=true
+      - HZ_NETWORK_JOIN_TCPIP_ENABLED=false
+    ports:
+      - "5701:5701"
+
+  hazelcast-2:
+    image: hazelcast/hazelcast:5.4
+    environment:
+      - HZ_CLUSTERNAME=bank-cluster
+      - HZ_NETWORK_JOIN_MULTICAST_ENABLED=true
+      - HZ_NETWORK_JOIN_TCPIP_ENABLED=false
+    ports:
+      - "5702:5701"
+
+  hazelcast-3:
+    image: hazelcast/hazelcast:5.4
+    environment:
+      - HZ_CLUSTERNAME=bank-cluster
+      - HZ_NETWORK_JOIN_MULTICAST_ENABLED=true
+      - HZ_NETWORK_JOIN_TCPIP_ENABLED=false
+    ports:
+      - "5703:5701"
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: bankdb
+      POSTGRES_USER: bankuser
+      POSTGRES_PASSWORD: bankpass
+    ports:
+      - "5432:5432"
+    command:
+      - "postgres"
+      - "-c"
+      - "synchronous_commit=off"
+      - "-c"
+      - "fsync=off"
+      - "-c"
+      - "full_page_writes=off"
+      - "-c"
+      - "max_connections=200"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  logging-service-1:
+    build: ./logging-service
+    ports:
+      - "8011:8000"
+    environment:
+      SERVICE_NAME: logging-service-1
+      SERVICE_URL: http://logging-service-1:8000
+      CONFIG_SERVER_URL: http://config-server:8000
+      HAZELCAST_MEMBERS: hazelcast-1:5701
+    depends_on:
+      - config-server
+      - hazelcast-1
+      - hazelcast-2
+      - hazelcast-3
+
+  logging-service-2:
+    build: ./logging-service
+    ports:
+      - "8012:8000"
+    environment:
+      SERVICE_NAME: logging-service-2
+      SERVICE_URL: http://logging-service-2:8000
+      CONFIG_SERVER_URL: http://config-server:8000
+      HAZELCAST_MEMBERS: hazelcast-1:5701
+    depends_on:
+      - config-server
+      - hazelcast-1
+      - hazelcast-2
+      - hazelcast-3
+
+  logging-service-3:
+    build: ./logging-service
+    ports:
+      - "8013:8000"
+    environment:
+      SERVICE_NAME: logging-service-3
+      SERVICE_URL: http://logging-service-3:8000
+      CONFIG_SERVER_URL: http://config-server:8000
+      HAZELCAST_MEMBERS: hazelcast-1:5701
+    depends_on:
+      - config-server
+      - hazelcast-1
+      - hazelcast-2
+      - hazelcast-3
+
+  counter-service:
+    build: ./counter-service
+    ports:
+      - "8002:8000"
+    environment:
+      SERVICE_NAME: counter-service
+      SERVICE_URL: http://counter-service:8000
+      CONFIG_SERVER_URL: http://config-server:8000
+      HAZELCAST_MEMBERS: hazelcast-1:5701
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: bankdb
+      DB_USER: bankuser
+      DB_PASSWORD: bankpass
+    depends_on:
+      - config-server
+      - postgres
+      - hazelcast-1
+      - hazelcast-2
+      - hazelcast-3
+
+  facade-service:
+    build: ./facade-service
+    ports:
+      - "8000:8000"
+    environment:
+      CONFIG_SERVER_URL: http://config-server:8000
+      HAZELCAST_MEMBERS: hazelcast-1:5701
+    depends_on:
+      - config-server
+      - counter-service
+      - logging-service-1
+      - logging-service-2
+      - logging-service-3
+
+volumes:
+  postgres-data:
